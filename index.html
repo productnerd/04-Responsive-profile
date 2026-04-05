@@ -33,6 +33,31 @@
         letter-spacing: 0.01em;
       }
 
+      /* Blue/teal palette — override the app's purple+pink theme tokens */
+      :root, :host {
+        --color-primary: #0891b2 !important;        /* cyan-600 */
+        --color-primary-light: #22d3ee !important;  /* cyan-400 */
+        --color-primary-dark: #0e7490 !important;   /* cyan-700 */
+        --color-accent: #14b8a6 !important;         /* teal-500 */
+      }
+
+      /* Override the hardcoded purple/pink hex values used in arbitrary
+         Tailwind gradient classes (.from-[#2D1B69], .to-[#4A1942], etc.) */
+      .from-\[\#2D1B69\] { --tw-gradient-from: #0c4a6e !important; }   /* sky-900  */
+      .from-\[\#4A1942\] { --tw-gradient-from: #164e63 !important; }   /* cyan-900 */
+      .from-\[\#3D1F3D\] { --tw-gradient-from: #134e4a !important; }   /* teal-900 */
+      .from-\[\#3D2E1F\] { --tw-gradient-from: #0f766e !important; }   /* teal-700 */
+      .from-\[\#4A2C2A\] { --tw-gradient-from: #155e75 !important; }   /* cyan-800 */
+      .from-\[\#1B4332\] { --tw-gradient-from: #0e7490 !important; }   /* cyan-700 */
+      .from-\[\#0D324D\] { --tw-gradient-from: #0c4a6e !important; }   /* sky-900  */
+      .to-\[\#2D1B3D\]   { --tw-gradient-to: #0c4a6e !important; }
+      .to-\[\#0D324D\]   { --tw-gradient-to: #164e63 !important; }
+      .to-\[\#0F3460\]   { --tw-gradient-to: #155e75 !important; }
+      .to-\[\#1B2838\]   { --tw-gradient-to: #134e4a !important; }
+      .to-\[\#16213E\]   { --tw-gradient-to: #0e7490 !important; }
+      .via-\[\#1A1A2E\]  { --tw-gradient-via: #083344 !important; }    /* cyan-950 */
+      .via-\[\#16213E\]  { --tw-gradient-via: #0c4a6e !important; }
+
       /* Looping video background */
       #bg-video {
         position: fixed;
