@@ -7,6 +7,9 @@ import Button from '../components/ui/Button'
 const MY_SESSION_KEY = 'tte_my_session'
 const REQUIRED_RESPONSES = 5
 
+// Basic RFC-ish email sanity check. Intentionally lenient.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 function generateSlug(): string {
   const chars = 'abcdefghijkmnpqrstuvwxyz23456789'
   let slug = ''
@@ -21,9 +24,13 @@ function getShareLink(slug: string): string {
   return `${base}#/s/${slug}`
 }
 
+type Step = 'name' | 'email'
+
 export default function Create() {
   const navigate = useNavigate()
+  const [step, setStep] = useState<Step>('name')
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [slug, setSlug] = useState<string | null>(null)
   const [creatorName, setCreatorName] = useState('')
@@ -68,8 +75,13 @@ export default function Create() {
     fetchCount()
   }, [slug])
 
-  const handleCreate = async () => {
+  const handleNameNext = () => {
     if (!name.trim()) return
+    setError('')
+    setStep('email')
+  }
+
+  const createSession = async (withEmail: string | null) => {
     setLoading(true)
     setError('')
 
@@ -79,6 +91,7 @@ export default function Create() {
     if (isSupabaseConfigured()) {
       const { error: dbError } = await supabase.from('tte_sessions').insert({
         creator_name: trimmedName,
+        email: withEmail,
         slug: newSlug,
         response_count: 0,
       })
@@ -92,6 +105,7 @@ export default function Create() {
       sessions[newSlug] = {
         id: crypto.randomUUID(),
         creator_name: trimmedName,
+        email: withEmail,
         slug: newSlug,
         created_at: new Date().toISOString(),
         response_count: 0,
@@ -110,6 +124,19 @@ export default function Create() {
     setLoading(false)
   }
 
+  const handleEmailSubmit = async () => {
+    const trimmed = email.trim()
+    if (trimmed && !EMAIL_RE.test(trimmed)) {
+      setError('That email looks off — mind double-checking?')
+      return
+    }
+    await createSession(trimmed || null)
+  }
+
+  const handleEmailSkip = async () => {
+    await createSession(null)
+  }
+
   const handleCopy = async () => {
     if (!slug) return
     await navigator.clipboard.writeText(getShareLink(slug))
@@ -123,6 +150,8 @@ export default function Create() {
     setSlug(null)
     setCreatorName('')
     setName('')
+    setEmail('')
+    setStep('name')
     setResponseCount(0)
   }
 
@@ -217,10 +246,69 @@ export default function Create() {
     )
   }
 
-  // Name entry screen
+  // Email entry screen (step 2)
+  if (step === 'email') {
+    return (
+      <div className="card-screen text-center">
+        <motion.div
+          key="email-step"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center gap-6 max-w-lg w-full"
+        >
+          <div className="text-5xl">📬</div>
+          <h1 className="text-3xl font-bold">Where should we ping you?</h1>
+          <p className="text-text-secondary">
+            Drop your email and we'll let you know the moment your results are ready.
+            <br />
+            <span className="text-text-secondary/70 text-sm">Totally optional — you can skip.</span>
+          </p>
+
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleEmailSubmit()}
+            placeholder="you@example.com"
+            autoFocus
+            maxLength={254}
+            inputMode="email"
+            autoComplete="email"
+            className="w-full max-w-sm px-6 py-4 rounded-2xl bg-white/5 border-2 border-white/10 text-center text-lg font-medium text-text-primary placeholder-text-secondary focus:outline-none focus:border-primary/50 transition-all"
+          />
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <Button onClick={handleEmailSubmit} disabled={loading}>
+              {loading ? 'Creating...' : 'Notify me →'}
+            </Button>
+            <button
+              onClick={handleEmailSkip}
+              disabled={loading}
+              className="text-sm text-text-secondary hover:text-text-primary cursor-pointer transition-colors disabled:opacity-40"
+            >
+              Skip for now
+            </button>
+          </div>
+
+          <button
+            onClick={() => { setError(''); setStep('name') }}
+            disabled={loading}
+            className="text-xs text-text-secondary hover:text-text-primary cursor-pointer transition-colors mt-2 disabled:opacity-40"
+          >
+            ← Back
+          </button>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // Name entry screen (step 1)
   return (
     <div className="card-screen text-center">
       <motion.div
+        key="name-step"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col items-center gap-6 max-w-lg w-full"
@@ -237,7 +325,7 @@ export default function Create() {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+          onKeyDown={(e) => e.key === 'Enter' && handleNameNext()}
           placeholder="Your first name"
           autoFocus
           maxLength={30}
@@ -246,8 +334,8 @@ export default function Create() {
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        <Button onClick={handleCreate} disabled={!name.trim() || loading}>
-          {loading ? 'Creating...' : 'Create my link'}
+        <Button onClick={handleNameNext} disabled={!name.trim()}>
+          Next →
         </Button>
       </motion.div>
     </div>
