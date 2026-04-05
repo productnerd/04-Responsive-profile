@@ -41,22 +41,34 @@
         --color-accent: #14b8a6 !important;         /* teal-500 */
       }
 
-      /* Override the hardcoded purple/pink hex values used in arbitrary
-         Tailwind gradient classes (.from-[#2D1B69], .to-[#4A1942], etc.) */
-      .from-\[\#2D1B69\] { --tw-gradient-from: #0c4a6e !important; }   /* sky-900  */
-      .from-\[\#4A1942\] { --tw-gradient-from: #164e63 !important; }   /* cyan-900 */
-      .from-\[\#3D1F3D\] { --tw-gradient-from: #134e4a !important; }   /* teal-900 */
-      .from-\[\#3D2E1F\] { --tw-gradient-from: #0f766e !important; }   /* teal-700 */
-      .from-\[\#4A2C2A\] { --tw-gradient-from: #155e75 !important; }   /* cyan-800 */
-      .from-\[\#1B4332\] { --tw-gradient-from: #0e7490 !important; }   /* cyan-700 */
-      .from-\[\#0D324D\] { --tw-gradient-from: #0c4a6e !important; }   /* sky-900  */
-      .to-\[\#2D1B3D\]   { --tw-gradient-to: #0c4a6e !important; }
-      .to-\[\#0D324D\]   { --tw-gradient-to: #164e63 !important; }
-      .to-\[\#0F3460\]   { --tw-gradient-to: #155e75 !important; }
-      .to-\[\#1B2838\]   { --tw-gradient-to: #134e4a !important; }
-      .to-\[\#16213E\]   { --tw-gradient-to: #0e7490 !important; }
-      .via-\[\#1A1A2E\]  { --tw-gradient-via: #083344 !important; }    /* cyan-950 */
-      .via-\[\#16213E\]  { --tw-gradient-via: #0c4a6e !important; }
+      /* The app wraps each full-screen view in a gradient using hardcoded hex
+         stops (e.g. .from-[#2D1B69].to-[#0F3460]). Make those specific stops
+         transparent so the video background shows through every screen, while
+         leaving other gradients (text headline, buttons) untouched. */
+      .from-\[\#2D1B69\],
+      .from-\[\#4A1942\],
+      .from-\[\#3D1F3D\],
+      .from-\[\#3D2E1F\],
+      .from-\[\#4A2C2A\],
+      .from-\[\#1B4332\],
+      .from-\[\#0D324D\],
+      .from-\[\#1A1A2E\] { --tw-gradient-from: transparent !important; }
+
+      .via-\[\#1A1A2E\],
+      .via-\[\#16213E\] { --tw-gradient-via: transparent !important; }
+
+      .to-\[\#2D1B3D\],
+      .to-\[\#0D324D\],
+      .to-\[\#0F3460\],
+      .to-\[\#1B2838\],
+      .to-\[\#16213E\] { --tw-gradient-to: transparent !important; }
+
+      /* Ensure the top-level screen wrappers and opaque surface utilities
+         never cover the video */
+      .card-screen,
+      .min-h-dvh,
+      .bg-surface\/80,
+      .bg-surface\/90 { background-color: transparent !important; }
 
       /* Looping video background */
       #bg-video {
