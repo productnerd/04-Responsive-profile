@@ -9,12 +9,29 @@
     <meta property="og:title" content="Fishbowl" />
     <meta property="og:description" content="Someone wants to see themselves through your eyes. Help them discover what makes them special." />
     <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Knewave&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script type="module" crossorigin src="/fishbowl/assets/index-Cd8hr0FE.js"></script>
     <link rel="stylesheet" crossorigin href="/fishbowl/assets/index-BPO91Eej.css">
     <style>
       /* Underwater background: let the video show through the React app */
       html, body, #root { background: transparent !important; }
       body { position: relative; }
+
+      /* Typography: Outfit for body, Knewave for titles (overrides bundled CSS) */
+      html, body, #root {
+        font-family: 'Outfit', system-ui, -apple-system, sans-serif !important;
+      }
+      :root {
+        --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+        --default-font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: 'Knewave', 'Outfit', system-ui, sans-serif !important;
+        font-weight: 400 !important;
+        letter-spacing: 0.01em;
+      }
 
       /* Looping video background */
       #bg-video {
