@@ -16,6 +16,7 @@ drop function if exists public.tte_increment_response_count cascade;
 create table public.tte_sessions (
   id uuid primary key default gen_random_uuid(),
   creator_name text not null check (char_length(creator_name) between 1 and 50),
+  email text check (email is null or char_length(email) between 3 and 254),
   slug text unique not null check (char_length(slug) between 4 and 20),
   created_at timestamptz not null default now(),
   response_count int not null default 0
