@@ -11,7 +11,6 @@ import GaugeChart from '../components/wrapped/GaugeChart'
 import QuoteCarousel from '../components/wrapped/QuoteCarousel'
 import ProgressDots from '../components/wrapped/ProgressDots'
 import RichText from '../components/wrapped/RichText'
-import Button from '../components/ui/Button'
 
 const REQUIRED_RESPONSES = 5
 
@@ -21,7 +20,6 @@ export default function Results() {
   const [data, setData] = useState<AggregatedResults | null>(null)
   const [loading, setLoading] = useState(true)
   const [cardIndex, setCardIndex] = useState(0)
-  const [started, setStarted] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -169,30 +167,7 @@ export default function Results() {
   }
 
   // ─── THE REVEAL ───
-
-  if (!started) {
-    return (
-      <WrapCard gradient="purple">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="flex flex-col items-center gap-8"
-        >
-          <div className="text-7xl">👁</div>
-          <h1 className="text-3xl md:text-4xl font-bold leading-tight">
-            {data.totalResponses} people looked at you
-            <br />
-            <span className="text-primary-light">— really looked.</span>
-          </h1>
-          <p className="text-text-secondary text-lg">Ready to see what they saw?</p>
-          <Button onClick={() => setStarted(true)}>
-            Show me →
-          </Button>
-        </motion.div>
-      </WrapCard>
-    )
-  }
+  // No landing gate. Land directly on the AI opening card.
 
   // Helper functions
   const mc = (id: number) => data.mcResults[id]
