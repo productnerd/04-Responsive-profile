@@ -18,7 +18,7 @@ export interface AiInsights {
   }
   mc: Record<string, { otherSummary: string }>
   freetext: Record<string, { summary: string }>
-  advice: Array<{ area: AreaKey; title: string; action: string[] | string }>
+  advice: Array<{ area: AreaKey; title?: string; action: string[] | string }>
 }
 
 interface State {

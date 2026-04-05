@@ -664,11 +664,10 @@ export default function Results() {
                       key={a.area}
                       className="bg-white/5 rounded-2xl p-4 border border-white/10 text-left h-full"
                     >
-                      <p className="text-[10px] uppercase tracking-widest text-accent font-semibold mb-1">
+                      <p className="text-[10px] uppercase tracking-widest text-accent font-semibold mb-2">
                         {AREA_LABELS[a.area]}
                       </p>
-                      <p className="text-sm font-semibold text-text-primary mb-2"><RichText text={a.title} /></p>
-                      <ul className="flex flex-col gap-1.5 text-sm text-text-secondary leading-snug">
+                      <ul className="flex flex-col gap-2 text-sm text-text-secondary leading-snug">
                         {bullets.map((b, i) => (
                           <li key={i} className="flex gap-2">
                             <span className="text-accent shrink-0">•</span>

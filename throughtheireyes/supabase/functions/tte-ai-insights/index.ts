@@ -182,22 +182,31 @@ The "title" field (inside advice) must NOT contain bold.
 ${areaBlock}
 
 === ADVICE BULLETS (critical, read carefully) ===
-Every "action" MUST be a JSON array of EXACTLY 2 separate short bullet strings. Not 1. Not 3. EXACTLY 2.
-Each bullet is its own independent sentence, MAX 14 WORDS. Count the words. If your bullet is over 14 words, cut it.
-Each bullet must contain at least one **bold** segment on the key verb or phrase.
-The two bullets must attack the advice from two DIFFERENT angles (e.g. one behavioral, one mindset; or one what-to-do, one what-to-notice). Never just rephrase the same idea twice.
-DO NOT write a single long paragraph and split it into two. Write TWO distinct short actionable bullets from scratch.
+Every "action" MUST be a JSON array of EXACTLY 2 bullet strings. Not 1. Not 3. EXACTLY 2.
+There is NO title, NO summary, NO heading above the bullets. Only the area label (e.g. "First Impressions") appears above them. That means EACH BULLET MUST BE COMPLETELY SELF-CONTAINED and make full sense on its own without the other bullet and without any title.
+Each bullet is ONE complete, standalone piece of advice. A reader should be able to read just that one bullet and understand exactly what to do and why.
+Each bullet MUST be max 18 words. Count them.
+Each bullet MUST contain at least one **bold** segment on the key verb or phrase.
+The two bullets must be TWO DIFFERENT pieces of advice, not two halves of the same idea. Think: two separate tips a friend would give you about this area. Not "tip + elaboration".
+Every bullet must include both the WHAT (the action) and enough context that the reader immediately knows why it matters, in that single sentence.
 
-GOOD example:
+GOOD example (each bullet stands alone, makes full sense by itself):
 "action": [
-  "Say **thank you** and stop. No deflection, no joke, no minimizing.",
-  "Notice the **urge to disappear** when praised. That feeling is the work."
+  "When someone compliments you, say **thank you** and stop talking. No joke, no deflection.",
+  "Notice the **urge to shrink** when praised. That discomfort is the exact work."
 ]
 
-BAD example (too long, one idea split in half, em dash):
+BAD example (bullets depend on each other or on a title to make sense):
 "action": [
-  "Your friends say you deflect every compliment with a joke — try just saying thank you this week, it will feel uncomfortable",
-  "That discomfort is the exact growth edge your friends are pointing at, so sit with it instead of redirecting"
+  "Your warmth surprises people.",
+  "Show it earlier in new settings."
+]
+(Bullet 1 is an observation, not advice. Bullet 2 only makes sense after bullet 1. Neither stands alone.)
+
+BAD example (one idea split in half, em dash):
+"action": [
+  "Your friends say you deflect every compliment with a joke — try saying thank you this week",
+  "That discomfort is the exact growth edge, so sit with it instead of redirecting"
 ]
 
 === OUTPUT FORMAT ===
@@ -225,23 +234,22 @@ Return ONLY valid JSON, no surrounding commentary, no code fences. String values
   "advice": [
     {
       "area": "first_impressions",
-      "title": "Short imperative, max 5 words, no bold, no dashes",
       "action": [
-        "First bullet. Max 14 words. One **bold** phrase. No dashes.",
-        "Second bullet. Different angle. Max 14 words. One **bold** phrase. No dashes."
+        "First standalone tip. Complete advice in one sentence. Max 18 words. One **bold** phrase. No dashes.",
+        "Second standalone tip. Different angle, independently complete. Max 18 words. One **bold** phrase. No dashes."
       ]
     },
-    { "area": "talents", "title": "...", "action": ["...", "..."] },
-    { "area": "communication", "title": "...", "action": ["...", "..."] },
-    { "area": "emotional_depth", "title": "...", "action": ["...", "..."] },
-    { "area": "reliability", "title": "...", "action": ["...", "..."] },
-    { "area": "blind_spots", "title": "...", "action": ["...", "..."] },
-    { "area": "in_the_group", "title": "...", "action": ["...", "..."] },
-    { "area": "what_they_love", "title": "...", "action": ["...", "..."] }
+    { "area": "talents", "action": ["...", "..."] },
+    { "area": "communication", "action": ["...", "..."] },
+    { "area": "emotional_depth", "action": ["...", "..."] },
+    { "area": "reliability", "action": ["...", "..."] },
+    { "area": "blind_spots", "action": ["...", "..."] },
+    { "area": "in_the_group", "action": ["...", "..."] },
+    { "area": "what_they_love", "action": ["...", "..."] }
   ]
 }
 
-"openingSummary.sections" MUST contain all 8 areas in the order above. "advice" MUST contain all 8 areas in the order above. Every "action" MUST be an array of exactly 2 bullet strings (not a single string). Each bullet MUST be under 14 words and MUST contain at least one **bold** segment. Only include "mc" entries for the question IDs listed as having Other answers. Include every freetext question in "freetext".`
+"openingSummary.sections" MUST contain all 8 areas in the order above. "advice" MUST contain all 8 areas in the order above, with NO "title" field. Every "action" MUST be an array of exactly 2 bullet strings. Each bullet MUST be a self-contained piece of advice (understandable alone, no dependency on the other bullet), under 18 words, with at least one **bold** segment. Only include "mc" entries for the question IDs listed as having Other answers. Include every freetext question in "freetext".`
 
     const userPrompt = `# The 25 Questions\n\n${qBlock}\n\n# Anonymous Responses (n=${responses.length})\n\n${answerBlock}\n\n# Questions with "Other" free-text answers\n\nOnly include these IDs in the "mc" object: ${mcWithOther.length ? mcWithOther.join(', ') : '(none — return "mc": {})'}\n\nAll freetext question IDs to cover: 3, 5, 10, 18, 19, 23, 24, 25\n\nReturn the JSON now.`
 
