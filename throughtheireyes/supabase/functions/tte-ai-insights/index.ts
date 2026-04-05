@@ -8,9 +8,66 @@
 // or `supabase secrets set --project-ref knftyqkhampkqchoncel ANTHROPIC_API_KEY=...`):
 //   - ANTHROPIC_API_KEY
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-injected.)
+//
+// Prompts live in the repo at throughtheireyes/prompts/tte-ai-insights.json and
+// are fetched from GitHub raw at request time (30s in-memory cache). Editing
+// that JSON file and pushing is enough to change the prompt, no redeploy.
+// Optional secret PROMPTS_URL overrides the source.
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+
+// ─── Prompt loader ──────────────────────────────────────────────────────────
+// Defaults to the current working branch. Override via PROMPTS_URL secret in
+// Supabase if you move to a different branch (e.g. after merging to main).
+const DEFAULT_PROMPTS_URL =
+  'https://raw.githubusercontent.com/productnerd/04-Responsive-profile/claude/feedback-webapp-setup-l0x8F/throughtheireyes/prompts/tte-ai-insights.json'
+
+interface PromptConfig {
+  model: string
+  maxTokens: number
+  systemPrompt: string
+  userPromptTemplate: string
+}
+
+// Hardcoded fallback used only if the remote fetch fails. Kept minimal and
+// just enough to produce valid output if GitHub is unreachable.
+const FALLBACK_PROMPTS: PromptConfig = {
+  model: 'claude-opus-4-6',
+  maxTokens: 8000,
+  systemPrompt:
+    'You are an analyst for "Through Their Eyes". Anonymous friends answered 25 questions about {{name}}. Speak to {{name}} in second person. Warm, brief, no em dashes. Bold 2-4 key phrases per string. Areas:\n{{areaBlock}}\nReturn JSON with openingSummary (headline, sections for all 8 areas), mc, freetext, and advice (8 entries, each with area and action array of exactly 2 standalone bullets, max 18 words each, at least one **bold** phrase each).',
+  userPromptTemplate:
+    '# Questions\n{{qBlock}}\n\n# Responses (n={{responseCount}})\n{{answerBlock}}\n\n# Other IDs: {{mcList}}\n\nReturn JSON now.',
+}
+
+let cachedPrompts: { config: PromptConfig; fetchedAt: number } | null = null
+const PROMPT_CACHE_MS = 30_000 // 30s, long enough to batch burst calls, short enough for fast iteration
+
+async function loadPrompts(): Promise<PromptConfig> {
+  const now = Date.now()
+  if (cachedPrompts && now - cachedPrompts.fetchedAt < PROMPT_CACHE_MS) {
+    return cachedPrompts.config
+  }
+  const url = Deno.env.get('PROMPTS_URL') || DEFAULT_PROMPTS_URL
+  try {
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) throw new Error(`prompts fetch ${res.status}`)
+    const json = (await res.json()) as PromptConfig
+    if (!json.systemPrompt || !json.userPromptTemplate) throw new Error('invalid prompts json')
+    cachedPrompts = { config: json, fetchedAt: now }
+    return json
+  } catch (e) {
+    console.error('prompt fetch failed, using fallback:', e)
+    return FALLBACK_PROMPTS
+  }
+}
+
+function interpolate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) =>
+    Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : `{{${key}}}`
+  )
+}
 
 type QType = 'mc' | 'rating' | 'freetext'
 interface Q {
@@ -156,102 +213,23 @@ Deno.serve(async (req) => {
       { key: 'what_they_love', label: 'What They Love About You', questions: '23, 24, 25' },
     ]
 
-    const areaBlock = AREAS.map((a) => `- ${a.key} ("${a.label}") — questions ${a.questions}`).join('\n')
+    const areaBlock = AREAS.map((a) => `- ${a.key} ("${a.label}"), questions ${a.questions}`).join('\n')
 
-    const systemPrompt = `You are an insightful analyst for a feedback app called "Through Their Eyes". Anonymous friends have answered 25 questions about a person named ${name}. Your job is to synthesize the results into warm, specific, cross-referenced insights that ${name} will read about themselves.
+    // Load prompts from the repo (GitHub raw) with in-memory caching + fallback.
+    // Edit throughtheireyes/prompts/tte-ai-insights.json and push to update.
+    const promptConfig = await loadPrompts()
 
-=== VOICE & TONE (applies to EVERY string you write) ===
-Speak TO ${name} in second person ("you", "your"). Never use their name. Never use third-person pronouns about them.
-Tone: warm, friendly, nurturing, mature, optimistic, down to earth, easy going. Like a wise, kind friend who read everything carefully.
-Never sycophantic. Never clinical. Never preachy. No throat-clearing. No "it's important to note". No filler.
-Be brief and scannable. Short sentences. Ground every claim in what respondents actually wrote.
-Look ACROSS questions for patterns (e.g. if "underestimates themselves" shows up in blind spots AND hidden talents AND final message, name that).
+    const vars: Record<string, string> = {
+      name,
+      areaBlock,
+      qBlock,
+      answerBlock,
+      responseCount: String(responses.length),
+      mcList: mcWithOther.length ? mcWithOther.join(', ') : '(none, return "mc": {})',
+    }
 
-=== ABSOLUTE BAN ON DASHES ===
-NEVER type the character "—" (U+2014 em dash).
-NEVER type the character "–" (U+2013 en dash).
-NEVER type " - " as a sentence connector (use commas, periods, colons, semicolons, or parentheses).
-This is the single most important rule. Every single string you emit will be scanned for these characters. A single em dash invalidates the entire response. Use commas and periods.
-
-=== BOLD MARKDOWN ===
-In every "insight", "summary", "otherSummary", and every advice bullet, wrap 2 to 4 of the most scannable key phrases in markdown bold using **double asterisks**. Choose punchy verbs and nouns, not filler words. Do NOT bold full sentences. Bold sparingly so the bolded words alone tell the gist.
-The "headline" field must NOT contain bold.
-The "title" field (inside advice) must NOT contain bold.
-
-=== AREAS (use these exact keys) ===
-${areaBlock}
-
-=== ADVICE BULLETS (critical, read carefully) ===
-Every "action" MUST be a JSON array of EXACTLY 2 bullet strings. Not 1. Not 3. EXACTLY 2.
-There is NO title, NO summary, NO heading above the bullets. Only the area label (e.g. "First Impressions") appears above them. That means EACH BULLET MUST BE COMPLETELY SELF-CONTAINED and make full sense on its own without the other bullet and without any title.
-Each bullet is ONE complete, standalone piece of advice. A reader should be able to read just that one bullet and understand exactly what to do and why.
-Each bullet MUST be max 18 words. Count them.
-Each bullet MUST contain at least one **bold** segment on the key verb or phrase.
-The two bullets must be TWO DIFFERENT pieces of advice, not two halves of the same idea. Think: two separate tips a friend would give you about this area. Not "tip + elaboration".
-Every bullet must include both the WHAT (the action) and enough context that the reader immediately knows why it matters, in that single sentence.
-
-GOOD example (each bullet stands alone, makes full sense by itself):
-"action": [
-  "When someone compliments you, say **thank you** and stop talking. No joke, no deflection.",
-  "Notice the **urge to shrink** when praised. That discomfort is the exact work."
-]
-
-BAD example (bullets depend on each other or on a title to make sense):
-"action": [
-  "Your warmth surprises people.",
-  "Show it earlier in new settings."
-]
-(Bullet 1 is an observation, not advice. Bullet 2 only makes sense after bullet 1. Neither stands alone.)
-
-BAD example (one idea split in half, em dash):
-"action": [
-  "Your friends say you deflect every compliment with a joke — try saying thank you this week",
-  "That discomfort is the exact growth edge, so sit with it instead of redirecting"
-]
-
-=== OUTPUT FORMAT ===
-Return ONLY valid JSON, no surrounding commentary, no code fences. String values MAY contain **bold** markdown but no other markdown. Shape:
-{
-  "openingSummary": {
-    "headline": "One punchy line, max 12 words, capturing the meta-finding that jumps out across all 25 answers. No bold. No dashes.",
-    "sections": [
-      { "area": "first_impressions", "insight": "2 to 3 sentences synthesizing this area. Specific and warm. 2 to 4 **bold** phrases. No dashes." },
-      { "area": "talents", "insight": "..." },
-      { "area": "communication", "insight": "..." },
-      { "area": "emotional_depth", "insight": "..." },
-      { "area": "reliability", "insight": "..." },
-      { "area": "blind_spots", "insight": "..." },
-      { "area": "in_the_group", "insight": "..." },
-      { "area": "what_they_love", "insight": "..." }
-    ]
-  },
-  "mc": {
-    "<questionId>": { "otherSummary": "2 to 3 sentences on what the 'Other' respondents added, whether they cluster around a theme, how that compares to the canonical winners. No dashes." }
-  },
-  "freetext": {
-    "<questionId>": { "summary": "2 to 4 sentence synthesis. What people agree on, what is unexpected, what resonates with other questions. Specific, quotable, short. No dashes." }
-  },
-  "advice": [
-    {
-      "area": "first_impressions",
-      "action": [
-        "First standalone tip. Complete advice in one sentence. Max 18 words. One **bold** phrase. No dashes.",
-        "Second standalone tip. Different angle, independently complete. Max 18 words. One **bold** phrase. No dashes."
-      ]
-    },
-    { "area": "talents", "action": ["...", "..."] },
-    { "area": "communication", "action": ["...", "..."] },
-    { "area": "emotional_depth", "action": ["...", "..."] },
-    { "area": "reliability", "action": ["...", "..."] },
-    { "area": "blind_spots", "action": ["...", "..."] },
-    { "area": "in_the_group", "action": ["...", "..."] },
-    { "area": "what_they_love", "action": ["...", "..."] }
-  ]
-}
-
-"openingSummary.sections" MUST contain all 8 areas in the order above. "advice" MUST contain all 8 areas in the order above, with NO "title" field. Every "action" MUST be an array of exactly 2 bullet strings. Each bullet MUST be a self-contained piece of advice (understandable alone, no dependency on the other bullet), under 18 words, with at least one **bold** segment. Only include "mc" entries for the question IDs listed as having Other answers. Include every freetext question in "freetext".`
-
-    const userPrompt = `# The 25 Questions\n\n${qBlock}\n\n# Anonymous Responses (n=${responses.length})\n\n${answerBlock}\n\n# Questions with "Other" free-text answers\n\nOnly include these IDs in the "mc" object: ${mcWithOther.length ? mcWithOther.join(', ') : '(none — return "mc": {})'}\n\nAll freetext question IDs to cover: 3, 5, 10, 18, 19, 23, 24, 25\n\nReturn the JSON now.`
+    const systemPrompt = interpolate(promptConfig.systemPrompt, vars)
+    const userPrompt = interpolate(promptConfig.userPromptTemplate, vars)
 
     // 5. Call Claude
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
@@ -267,8 +245,8 @@ Return ONLY valid JSON, no surrounding commentary, no code fences. String values
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 8000,
+        model: promptConfig.model,
+        max_tokens: promptConfig.maxTokens,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       }),
