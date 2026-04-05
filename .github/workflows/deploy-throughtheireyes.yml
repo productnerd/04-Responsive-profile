@@ -1,0 +1,46 @@
+name: Deploy Through Their Eyes
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - 'claude/**'
+    paths:
+      - 'throughtheireyes/**'
+      - '.github/workflows/deploy-throughtheireyes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-throughtheireyes
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: throughtheireyes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to gh-pages/throughtheireyes
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: throughtheireyes/dist
+          target-folder: throughtheireyes
+          branch: gh-pages
+          clean: true
