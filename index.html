@@ -11,8 +11,144 @@
     <meta property="og:type" content="website" />
     <script type="module" crossorigin src="/fishbowl/assets/index-Cd8hr0FE.js"></script>
     <link rel="stylesheet" crossorigin href="/fishbowl/assets/index-BPO91Eej.css">
+    <style>
+      /* Underwater background: let the video show through the React app */
+      html, body, #root { background: transparent !important; }
+      body { position: relative; }
+
+      /* Looping video background */
+      #bg-video {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -3;
+        pointer-events: none;
+        filter: url(#water);
+        will-change: transform;
+      }
+
+      /* Subtle dark tint to keep UI legible over the video */
+      #bg-tint {
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        pointer-events: none;
+        background: linear-gradient(180deg, rgba(10, 20, 40, 0.25) 0%, rgba(0, 10, 30, 0.55) 100%);
+      }
+
+      /* SVG that only hosts the water-distortion filter definition */
+      .water-distortion {
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+      }
+
+      /* Bubbles layer */
+      #bubbles {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .bubble {
+        position: absolute;
+        bottom: -40px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at 30% 30%,
+          rgba(255, 255, 255, 0.85) 0%,
+          rgba(255, 255, 255, 0.35) 25%,
+          rgba(255, 255, 255, 0.08) 60%,
+          rgba(255, 255, 255, 0) 100%
+        );
+        box-shadow:
+          inset 0 0 4px rgba(255, 255, 255, 0.6),
+          0 0 6px rgba(200, 230, 255, 0.25);
+        opacity: 0;
+        animation-name: rise;
+        animation-timing-function: ease-in;
+        animation-iteration-count: 1;
+        animation-fill-mode: forwards;
+        will-change: transform, opacity;
+      }
+      @keyframes rise {
+        0%   { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0; }
+        10%  { opacity: 0.9; }
+        50%  { transform: translate3d(calc(var(--drift, 0px) * 0.5), -55vh, 0) scale(1); }
+        90%  { opacity: 0.7; }
+        100% { transform: translate3d(var(--drift, 0px), -110vh, 0) scale(1.05); opacity: 0; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #bg-video { filter: none; }
+        .bubble { display: none; }
+      }
+    </style>
   </head>
   <body>
+    <video id="bg-video" autoplay loop muted playsinline preload="auto"
+           src="/fishbowl/kling_20260406_%E4%BD%9C%E5%93%81_a_scene_of_677_0.mp4"></video>
+    <div id="bg-tint"></div>
+    <svg class="water-distortion" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <filter id="water" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="3" result="noise">
+          <animate attributeName="baseFrequency"
+                   dur="18s"
+                   values="0.012 0.02; 0.016 0.024; 0.012 0.02"
+                   repeatCount="indefinite" />
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
+    <div id="bubbles" aria-hidden="true"></div>
     <div id="root"></div>
+    <script>
+      (function () {
+        var container = document.getElementById('bubbles');
+        if (!container) return;
+        var MAX_BUBBLES = 40;
+        var active = 0;
+
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+
+        function spawnBubble() {
+          if (active >= MAX_BUBBLES) return;
+          var size = rand(6, 28);
+          var duration = rand(6, 14);
+          var left = rand(0, 100);
+          var drift = rand(-60, 60);
+
+          var b = document.createElement('div');
+          b.className = 'bubble';
+          b.style.width = size + 'px';
+          b.style.height = size + 'px';
+          b.style.left = left + '%';
+          b.style.animationDuration = duration + 's';
+          b.style.setProperty('--drift', drift + 'px');
+
+          active++;
+          b.addEventListener('animationend', function () {
+            active--;
+            if (b.parentNode) b.parentNode.removeChild(b);
+          });
+          container.appendChild(b);
+        }
+
+        function loop() {
+          spawnBubble();
+          setTimeout(loop, rand(200, 1200));
+        }
+
+        // Seed a few bubbles so the scene isn't empty on load
+        for (var i = 0; i < 6; i++) {
+          setTimeout(spawnBubble, i * 300);
+        }
+        loop();
+      })();
+    </script>
   </body>
 </html>
