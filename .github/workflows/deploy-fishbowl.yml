@@ -1,4 +1,4 @@
-name: Deploy Through Their Eyes
+name: Deploy Fishbowl
 
 on:
   push:
@@ -7,15 +7,15 @@ on:
       - main
       - 'claude/**'
     paths:
-      - 'throughtheireyes/**'
-      - '.github/workflows/deploy-throughtheireyes.yml'
+      - 'fishbowl/**'
+      - '.github/workflows/deploy-fishbowl.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: deploy-throughtheireyes
+  group: deploy-fishbowl
   cancel-in-progress: true
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: throughtheireyes
+        working-directory: fishbowl
     steps:
       - uses: actions/checkout@v4
 
@@ -37,10 +37,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to gh-pages/throughtheireyes
+      - name: Deploy to gh-pages root
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: throughtheireyes/dist
-          target-folder: throughtheireyes
+          folder: fishbowl/dist
           branch: gh-pages
           clean: true
