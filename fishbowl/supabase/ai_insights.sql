@@ -1,5 +1,5 @@
 -- ============================================================================
--- Through Their Eyes — AI insights cache
+-- Fishbowl, AI insights cache
 -- Run in: https://supabase.com/dashboard/project/knftyqkhampkqchoncel/sql/new
 -- ============================================================================
 

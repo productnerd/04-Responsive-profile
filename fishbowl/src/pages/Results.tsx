@@ -100,7 +100,7 @@ export default function Results() {
   if (loading) {
     return (
       <div className="card-screen">
-        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="text-4xl">👁</motion.div>
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="text-4xl">🐠</motion.div>
       </div>
     )
   }

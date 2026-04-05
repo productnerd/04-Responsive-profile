@@ -9,7 +9,7 @@
 //   - ANTHROPIC_API_KEY
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-injected.)
 //
-// Prompts live in the repo at throughtheireyes/prompts/tte-ai-insights.json and
+// Prompts live in the repo at fishbowl/prompts/tte-ai-insights.json and
 // are fetched from GitHub raw at request time (30s in-memory cache). Editing
 // that JSON file and pushing is enough to change the prompt, no redeploy.
 // Optional secret PROMPTS_URL overrides the source.
@@ -19,9 +19,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 // ─── Prompt loader ──────────────────────────────────────────────────────────
 // Defaults to the current working branch. Override via PROMPTS_URL secret in
-// Supabase if you move to a different branch (e.g. after merging to main).
+// Supabase if you move to a different branch (e.g. after merging to main),
+// or if the GitHub repo is renamed.
 const DEFAULT_PROMPTS_URL =
-  'https://raw.githubusercontent.com/productnerd/04-Responsive-profile/claude/feedback-webapp-setup-l0x8F/throughtheireyes/prompts/tte-ai-insights.json'
+  'https://raw.githubusercontent.com/productnerd/fishbowl/claude/feedback-webapp-setup-l0x8F/fishbowl/prompts/tte-ai-insights.json'
 
 interface PromptConfig {
   model: string
@@ -36,7 +37,7 @@ const FALLBACK_PROMPTS: PromptConfig = {
   model: 'claude-opus-4-6',
   maxTokens: 8000,
   systemPrompt:
-    'You are an analyst for "Through Their Eyes". Anonymous friends answered 25 questions about {{name}}. Speak to {{name}} in second person. Warm, brief, no em dashes. Bold 2-4 key phrases per string. Areas:\n{{areaBlock}}\nReturn JSON with openingSummary (headline, sections for all 8 areas), mc, freetext, and advice (8 entries, each with area and action array of exactly 2 standalone bullets, max 18 words each, at least one **bold** phrase each).',
+    'You are an analyst for "Fishbowl". Anonymous friends answered 25 questions about {{name}}. Speak to {{name}} in second person. Warm, brief, no em dashes. Bold 2-4 key phrases per string. Areas:\n{{areaBlock}}\nReturn JSON with openingSummary (headline, sections for all 8 areas), mc, freetext, and advice (8 entries, each with area and action array of exactly 2 standalone bullets, max 18 words each, at least one **bold** phrase each).',
   userPromptTemplate:
     '# Questions\n{{qBlock}}\n\n# Responses (n={{responseCount}})\n{{answerBlock}}\n\n# Other IDs: {{mcList}}\n\nReturn JSON now.',
 }
@@ -216,7 +217,7 @@ Deno.serve(async (req) => {
     const areaBlock = AREAS.map((a) => `- ${a.key} ("${a.label}"), questions ${a.questions}`).join('\n')
 
     // Load prompts from the repo (GitHub raw) with in-memory caching + fallback.
-    // Edit throughtheireyes/prompts/tte-ai-insights.json and push to update.
+    // Edit fishbowl/prompts/tte-ai-insights.json and push to update.
     const promptConfig = await loadPrompts()
 
     const vars: Record<string, string> = {

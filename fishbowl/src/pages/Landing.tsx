@@ -26,7 +26,7 @@ export default function Landing() {
           transition={{ duration: 0.6 }}
           className="text-7xl"
         >
-          👁
+          🐠
         </motion.div>
 
         <motion.h1
@@ -38,7 +38,7 @@ export default function Landing() {
           See yourself
           <br />
           <span className="bg-gradient-to-r from-primary-light to-accent bg-clip-text text-transparent">
-            through their eyes
+            from the outside
           </span>
         </motion.h1>
 

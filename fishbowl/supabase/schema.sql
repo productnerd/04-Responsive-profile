@@ -1,5 +1,5 @@
 -- ============================================================================
--- Through Their Eyes — Supabase Schema
+-- Fishbowl (fka Through Their Eyes), Supabase Schema
 -- All tables prefixed with tte_ to namespace them in the shared project.
 --
 -- Run this in the Supabase SQL Editor:
