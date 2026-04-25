@@ -4,10 +4,13 @@ import Create from './pages/Create'
 import Questionnaire from './pages/Questionnaire'
 import Done from './pages/Done'
 import Results from './pages/Results'
+import SeaBackground from './components/SeaBackground'
 
 export default function App() {
   return (
     <HashRouter>
+      <SeaBackground />
+      <div className="relative z-10">
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/create" element={<Create />} />
@@ -19,6 +22,7 @@ export default function App() {
         {/* Catch-all: never render a blank page on a bad URL */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </div>
     </HashRouter>
   )
 }
