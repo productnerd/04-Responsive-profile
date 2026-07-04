@@ -36,6 +36,7 @@ import HatsRadar from '../components/HatsRadar'
 import BlindSpotQuadrant from '../components/BlindSpotQuadrant'
 import ThroughLine from '../components/ThroughLine'
 import VirtueViceDial from '../components/VirtueViceDial'
+import VirtuousHumanScore from '../components/VirtuousHumanScore'
 import FourRooms from '../components/FourRooms'
 import LockedDoor from '../components/LockedDoor'
 import HeatCurve from '../components/HeatCurve'
@@ -89,6 +90,8 @@ export default function Results() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [pct, setPct] = useState<Record<string, number>>({})
+  // The population "top X%" for the composite Virtuous Human Score (team read).
+  const [scorePct, setScorePct] = useState<number | null>(null)
   const [idx, setIdx] = useState(0)
   // Index of the deep "full read" card, set while building the deck below so the intro
   // card can jump straight to it (people were stopping short and missing the centerpiece).
@@ -131,6 +134,31 @@ export default function Results() {
         insights.competencies.map(async (c) => [c.dimension, await topPercent(c.dimension, c.average, true)] as const)
       )
       if (!cancelled) setPct(Object.fromEntries([...vs, ...cs]))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [insights])
+
+  // Population rank for the composite Virtuous Human Score. There's no population
+  // norm for the blended score itself, so we approximate it from the per-dimension
+  // "top X%" the app already computes (balance-based, higher-is-best=false) across
+  // every virtue and hat, then average — grounded in the live norm when it exists
+  // and the seeded default otherwise.
+  useEffect(() => {
+    if (!insights) return
+    let cancelled = false
+    ;(async () => {
+      const dims = [
+        ...insights.virtues.map((v) => ({ dimension: v.dimension, score: v.mu })),
+        ...((insights.hats ?? []).filter((h) => h.n > 0).map((h) => ({ dimension: h.key, score: h.mu }))),
+      ]
+      if (dims.length === 0) {
+        if (!cancelled) setScorePct(null)
+        return
+      }
+      const tops = await Promise.all(dims.map((d) => topPercent(d.dimension, d.score, false)))
+      if (!cancelled) setScorePct(Math.round(tops.reduce((a, b) => a + b, 0) / tops.length))
     })()
     return () => {
       cancelled = true
@@ -982,6 +1010,64 @@ export default function Results() {
         </div>
       ),
     })
+  }
+
+  // ── The Virtuous Human Score: the bottom line. One 0-100 number for how close to
+  // the golden-mean centre (5) the subject lands across the ten virtues and the six
+  // thinking hats — the least deviation from centre, the higher the score. The two
+  // sources (your read / your team's) and the two activities (virtues / hats) are
+  // each weighted equally: we average whichever of the four groups have data, so a
+  // team-only report still scores and a self-read simply blends in. ──
+  {
+    const bal = (v: number) => 1 - Math.abs(Math.min(9, Math.max(1, v)) - 5) / 4
+    const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null)
+    const teamVirtue = mean(insights.virtues.map((v) => bal(v.mu)))
+    const teamHat = mean((insights.hats ?? []).filter((h) => h.n > 0).map((h) => bal(h.mu)))
+    const selfVirtueVals = selfVirtues
+      ? insights.virtues.map((v) => selfVirtues[v.dimension]).filter((n): n is number => typeof n === 'number' && !Number.isNaN(n))
+      : []
+    const selfHatVals = selfHats
+      ? Object.values(selfHats).filter((n): n is number => typeof n === 'number' && !Number.isNaN(n))
+      : []
+    const selfVirtue = mean(selfVirtueVals.map(bal))
+    const selfHat = mean(selfHatVals.map(bal))
+    const groups = [teamVirtue, teamHat, selfVirtue, selfHat].filter((g): g is number => g !== null)
+    if (groups.length > 0) {
+      const score = Math.round((groups.reduce((a, b) => a + b, 0) / groups.length) * 100)
+      const to100 = (g: number | null) => (g === null ? null : Math.round(g * 100))
+      const rows = [
+        { label: 'Ten virtues', team: to100(teamVirtue), self: to100(selfVirtue) },
+        { label: 'Thinking hats', team: to100(teamHat), self: to100(selfHat) },
+      ].filter((row) => row.team != null || row.self != null)
+      // Only surface the population badge when it's a genuine distinction — top
+      // quartile or better. (Reading "show if top X%, as long as x is 25 or above,
+      // otherwise don't" as "show only when they rank top-25%-or-better"; flip this
+      // single constant to change the threshold.)
+      const SHOW_TOP_PCT_AT_OR_UNDER = 25
+      const showTop = scorePct != null && scorePct <= SHOW_TOP_PCT_AT_OR_UNDER
+      cards.push({
+        tone: 'sand',
+        node: (
+          <div className="flex min-h-[60vh] flex-col justify-center">
+            <p className="kicker mb-1 text-center text-pink-deep">
+              the bottom line
+              <InfoTip text="One score for how close to the golden mean you land across the ten virtues and the six thinking hats — your own read blended with your team's. The virtue is the middle; the closer to centre on every scale, the higher the score, out of 100." />
+            </p>
+            <h2 className="display mb-6 text-center text-3xl">Your virtuous human score</h2>
+            <VirtuousHumanScore score={score} topPct={showTop ? scorePct : null} rows={rows} hasSelf={hasSelf} />
+            {!hasSelf && (
+              <p className="mt-6 text-center text-sm text-ink-soft">
+                This is your team's read alone.{' '}
+                <button onClick={goSelf} className="cursor-pointer font-bold text-pink-deep underline">
+                  Take your self-read
+                </button>{' '}
+                to blend in your own.
+              </p>
+            )}
+          </div>
+        ),
+      })
+    }
   }
 
   // Action plan: the practical payoff. 2 to stop / 2 to start now, then 2 more each
