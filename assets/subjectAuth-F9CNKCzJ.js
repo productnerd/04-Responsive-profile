@@ -1,0 +1,1 @@
+var e=`fishbowl_subject_auth`;function t(){try{let t=localStorage.getItem(e);if(!t)return null;let n=JSON.parse(t);return n?.bearer?n:null}catch{return null}}function n(t){localStorage.setItem(e,JSON.stringify(t))}function r(){localStorage.removeItem(e)}export{t as n,n as r,r as t};
